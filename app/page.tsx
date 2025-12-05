@@ -7,7 +7,7 @@ import {
   GripVertical, TrendingUp, Activity, Table as TableIcon,
   ChevronLeft, ChevronRight, Trash2, ArrowUp, ArrowDown, 
   ArrowUpDown, ShieldAlert, Lock, Pencil, Download, Upload, Zap, LayoutTemplate,
-  ArrowLeft
+  ArrowLeft, AlertTriangle
 } from 'lucide-react';
 import { 
   AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer 
@@ -144,7 +144,7 @@ const useDashboardStore = create<DashboardState>()(
       }),
       toggleEditMode: () => set((state) => ({ isEditMode: !state.isEditMode })),
     }),
-    { name: 'finboard-storage-v17-exclusive-mobile' }
+    { name: 'finboard-storage-v18-no-alerts' }
   )
 );
 
@@ -487,11 +487,7 @@ const ConfigWidgetModal = ({ onClose, editWidget }: ModalProps) => {
   const [availablePaths, setAvailablePaths] = useState<Record<string, any>>({});
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Auto-test API on mount
-  useEffect(() => { 
-      if (editWidget && !socketUrl) handleTestApi(); 
-      else if (!editWidget && !socketUrl && !apiKey) handleTestApi();
-  }, []);
+  // REMOVED AUTO-TEST on mount. User must now click "Add Field" to see fields.
 
   const handleTestApi = async () => {
     if (!apiUrl) return;
@@ -523,11 +519,8 @@ const ConfigWidgetModal = ({ onClose, editWidget }: ModalProps) => {
     } catch (error: unknown) {
       setApiRawData(null);
       const errorMessage = error instanceof Error ? error.message : "Unknown Error";
-      if (!editWidget) {
-         console.error(errorMessage);
-      } else {
-         alert(errorMessage);
-      }
+      // Removed silent fail check since we are manual now
+      alert(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -568,10 +561,7 @@ const ConfigWidgetModal = ({ onClose, editWidget }: ModalProps) => {
         <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
             
             {/* --- CONFIG PANEL --- */}
-            {/* LOGIC: 
-                Mobile: Show ONLY if mobileView is 'config'. 
-                Desktop: Always Show. 
-            */}
+            {/* LOGIC: Mobile: Show ONLY if mobileView is 'config'. Desktop: Always Show. */}
             <div className={cn(
                 "flex-1 overflow-y-auto custom-scrollbar p-4 lg:p-6 space-y-6 border-r border-gray-800",
                 mobileView === 'explorer' ? 'hidden lg:block' : 'block'
@@ -596,7 +586,9 @@ const ConfigWidgetModal = ({ onClose, editWidget }: ModalProps) => {
                                 <div className="col-span-1"><label className={labelStyle}>Param Name</label><input className={inputStyle} value={apiKeyParam} onChange={e => setApiKeyParam(e.target.value)} /></div>
                                 <div className="col-span-1 md:col-span-2"><label className={labelStyle}>API Key</label><input type="password" className={inputStyle} value={apiKey} onChange={e => setApiKey(e.target.value)} /></div>
                            </div>
-                           <button onClick={handleTestApi} disabled={isLoading} className="w-full bg-blue-600 hover:bg-blue-700 text-white p-2 rounded text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20">{isLoading ? <RefreshCw className="animate-spin" size={14}/> : <Check size={14}/>} Test REST & Select Fields</button>
+                           
+                           {/* UPDATED: Renamed Button to "Add Field" */}
+                           <button onClick={handleTestApi} disabled={isLoading} className="w-full bg-blue-600 hover:bg-blue-700 text-white p-2 rounded text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20">{isLoading ? <RefreshCw className="animate-spin" size={14}/> : <Plus size={14}/>} Add Field</button>
                        </div>
                     ) : (
                        <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-800 space-y-4">
@@ -640,17 +632,11 @@ const ConfigWidgetModal = ({ onClose, editWidget }: ModalProps) => {
             </div>
             
             {/* --- EXPLORER PANEL --- */}
-            {/* LOGIC:
-                Mobile: Show ONLY if mobileView is 'explorer'. Takes full width (flex-1).
-                Desktop: Always Show (w-300).
-                If socketUrl is set, always hidden.
-            */}
+            {/* LOGIC: Mobile: Show ONLY if mobileView is 'explorer'. Desktop: Always Show (w-300). */}
             {!socketUrl && (
                 <div className={cn(
                     "bg-[#151820] border-t lg:border-t-0 lg:border-l border-gray-800 flex flex-col transition-all",
-                    // Desktop Width
                     "w-full lg:w-[300px]",
-                    // Mobile Toggle Logic: if explorer, flex-1 (full width). If config, hidden. Desktop always flex.
                     mobileView === 'explorer' ? 'flex flex-1' : 'hidden lg:flex'
                 )}>
                     {/* MOBILE-ONLY HEADER with DONE button */}
@@ -694,15 +680,41 @@ const ConfigWidgetModal = ({ onClose, editWidget }: ModalProps) => {
   );
 };
 
-// --- COMPONENT: TEMPLATE SELECTOR ---
+// --- COMPONENT: TEMPLATE SELECTOR (Updated with Custom Confirmation Modal) ---
 const TemplateSelector = ({ onClose }: { onClose: () => void }) => {
   const { setWidgets } = useDashboardStore();
-  const load = (key: string) => {
-      if(confirm("This will replace your current dashboard. Continue?")) {
-          setWidgets(TEMPLATES[key]);
+  const [confirmKey, setConfirmKey] = useState<string | null>(null);
+
+  const confirmLoad = () => {
+      if (confirmKey && TEMPLATES[confirmKey]) {
+          setWidgets(TEMPLATES[confirmKey]);
           onClose();
       }
   };
+
+  // If a template is selected for confirmation, show this UI instead of the list
+  if (confirmKey) {
+      return (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-[#0F1219] w-full max-w-md rounded-xl border border-gray-800 p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+                <div className="flex flex-col items-center text-center gap-4">
+                    <div className="h-12 w-12 rounded-full bg-red-900/30 flex items-center justify-center text-red-500">
+                        <AlertTriangle size={24} />
+                    </div>
+                    <div>
+                        <h2 className="text-xl font-bold text-white">Replace Dashboard?</h2>
+                        <p className="text-sm text-gray-400 mt-2">Loading this template will remove all your current widgets. This action cannot be undone.</p>
+                    </div>
+                    <div className="flex gap-3 w-full mt-2">
+                        <button onClick={() => setConfirmKey(null)} className="flex-1 px-4 py-2.5 rounded-lg border border-gray-700 text-gray-300 hover:bg-gray-800 transition">Cancel</button>
+                        <button onClick={confirmLoad} className="flex-1 px-4 py-2.5 rounded-lg bg-red-600 text-white hover:bg-red-700 font-medium transition shadow-lg shadow-red-900/20">Confirm</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+      );
+  }
+
   return (
       <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-[#0F1219] w-full max-w-3xl rounded-xl border border-gray-800 p-6 shadow-2xl">
@@ -716,14 +728,14 @@ const TemplateSelector = ({ onClose }: { onClose: () => void }) => {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* CRYPTO LIVE */}
-                  <button onClick={() => load('crypto-live')} className="p-4 border border-gray-700 rounded-xl hover:border-green-500 hover:bg-gray-800 text-left transition group relative overflow-hidden">
+                  <button onClick={() => setConfirmKey('crypto-live')} className="p-4 border border-gray-700 rounded-xl hover:border-green-500 hover:bg-gray-800 text-left transition group relative overflow-hidden">
                       <div className="absolute top-0 right-0 bg-green-600 text-[10px] px-2 py-0.5 text-white font-bold rounded-bl-lg">NO KEY</div>
                       <div className="flex items-center gap-2 mb-2 text-green-400"><Zap size={20}/><span className="font-bold text-lg">Crypto Live</span></div>
                       <p className="text-xs text-gray-400">Real-time WebSocket feeds for Bitcoin and Ethereum.</p>
                   </button>
 
                   {/* MARKET OVERVIEW */}
-                  <button onClick={() => load('market-overview')} className="p-4 border border-gray-700 rounded-xl hover:border-blue-500 hover:bg-gray-800 text-left transition group relative overflow-hidden">
+                  <button onClick={() => setConfirmKey('market-overview')} className="p-4 border border-gray-700 rounded-xl hover:border-blue-500 hover:bg-gray-800 text-left transition group relative overflow-hidden">
                       <div className="absolute top-0 right-0 bg-green-600 text-[10px] px-2 py-0.5 text-white font-bold rounded-bl-lg">NO KEY</div>
                       <div className="flex items-center gap-2 mb-2 text-blue-400"><LayoutTemplate size={20}/><span className="font-bold text-lg">Market Overview</span></div>
                       <p className="text-xs text-gray-400">Top 10 Crypto table and detailed Bitcoin cards using CoinGecko.</p>
