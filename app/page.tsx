@@ -144,7 +144,7 @@ const useDashboardStore = create<DashboardState>()(
       }),
       toggleEditMode: () => set((state) => ({ isEditMode: !state.isEditMode })),
     }),
-    { name: 'finboard-storage-v18-no-alerts' }
+    { name: 'finboard-storage-v19-download-check' }
   )
 );
 
@@ -550,8 +550,8 @@ const ConfigWidgetModal = ({ onClose, editWidget }: ModalProps) => {
   const inputStyle = "w-full bg-[#1A1D26] border border-gray-700 rounded-lg p-2.5 text-white text-sm focus:outline-none focus:border-green-500 transition placeholder-gray-600";
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-[#0F1219] w-full max-w-5xl rounded-xl border border-gray-800 flex flex-col max-h-[90vh] shadow-2xl overflow-hidden relative">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-[#0F1219] w-full max-w-5xl rounded-xl border border-gray-800 flex flex-col max-h-[90vh] shadow-2xl overflow-hidden relative" onClick={(e) => e.stopPropagation()}>
         <div className="p-5 border-b border-gray-800 flex justify-between items-center bg-[#151820]">
           <h2 className="text-xl font-bold text-white">{editWidget ? 'Edit Widget' : 'Add Widget'}</h2>
           <button onClick={onClose}><X className="text-gray-400 hover:text-white" /></button>
@@ -695,8 +695,8 @@ const TemplateSelector = ({ onClose }: { onClose: () => void }) => {
   // If a template is selected for confirmation, show this UI instead of the list
   if (confirmKey) {
       return (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-[#0F1219] w-full max-w-md rounded-xl border border-gray-800 p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setConfirmKey(null)}>
+            <div className="bg-[#0F1219] w-full max-w-md rounded-xl border border-gray-800 p-6 shadow-2xl animate-in fade-in zoom-in duration-200" onClick={(e) => e.stopPropagation()}>
                 <div className="flex flex-col items-center text-center gap-4">
                     <div className="h-12 w-12 rounded-full bg-red-900/30 flex items-center justify-center text-red-500">
                         <AlertTriangle size={24} />
@@ -716,8 +716,8 @@ const TemplateSelector = ({ onClose }: { onClose: () => void }) => {
   }
 
   return (
-      <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-[#0F1219] w-full max-w-3xl rounded-xl border border-gray-800 p-6 shadow-2xl">
+      <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
+          <div className="bg-[#0F1219] w-full max-w-3xl rounded-xl border border-gray-800 p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
               <div className="flex justify-between mb-6">
                   <div>
                       <h2 className="text-xl font-bold text-white">Choose Template</h2>
@@ -793,7 +793,9 @@ export default function DashboardPage() {
              <div className="flex gap-1 bg-gray-800 rounded-lg p-1 border border-gray-700">
                 <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".json" />
                 <button onClick={() => fileInputRef.current?.click()} title="Import" className="p-2 hover:bg-gray-700 rounded text-gray-400 hover:text-white transition"><Upload size={18}/></button>
-                <button onClick={handleExport} title="Export" className="p-2 hover:bg-gray-700 rounded text-gray-400 hover:text-white transition"><Download size={18}/></button>
+                {widgets.length > 0 && (
+                  <button onClick={handleExport} title="Export" className="p-2 hover:bg-gray-700 rounded text-gray-400 hover:text-white transition"><Download size={18}/></button>
+                )}
              </div>
              <button onClick={() => setIsTemplateOpen(true)} className="px-4 py-2.5 rounded-lg border border-gray-700 bg-gray-800 hover:text-white text-gray-400 flex gap-2 items-center"><LayoutTemplate size={18}/> Templates</button>
              <button onClick={toggleEditMode} className={`px-4 py-2.5 rounded-lg flex gap-2 border transition ${isEditMode ? 'border-yellow-500 text-yellow-500 bg-yellow-500/10' : 'border-gray-700 bg-gray-800'}`}>{isEditMode ? <Save size={18}/> : <Layout size={18}/>} <span>{isEditMode ? 'Save Layout' : 'Edit'}</span></button>
@@ -822,4 +824,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-//okdddfdefefe
